@@ -620,6 +620,11 @@ error:
     return r;
 }
 
+/* For 2020-01-19 support */
+static inline JS_BOOL JS_IsInteger(JSValueConst v) {
+    int tag = JS_VALUE_GET_TAG(v);
+    return tag == JS_TAG_INT || tag == JS_TAG_BIG_INT;
+}
 
 /* r = fficall(name, p1,...pn)
  */
