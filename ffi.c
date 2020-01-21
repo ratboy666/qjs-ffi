@@ -577,7 +577,7 @@ static JSValue js_ffidefine(JSContext *ctx, JSValueConst this_val,
     const char *rtype = NULL;
     const char *params[MAX_PARAMETERS + 1];
     int i, nparams = 0;
-    JSValue r = JS_EXCEPTION;
+    JSValue r = JS_FALSE;
     name = JS_ToCString(ctx, argv[0]);
     if (!name)
 	goto error;
