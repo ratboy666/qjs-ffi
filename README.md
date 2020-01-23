@@ -206,8 +206,8 @@ Breakpoints can then be set in other shared objects.
 * ArrayBuffer can be passed (converted to pointer like string)
 * Add ffitoarraybuffer(p, size)
 * Add type "buffer"
-* Wed Jan 22 22:17:33 EST 2020
 * Add errno function
+* Only publish RTLD_ constants if available
 
 ## Limitations ##
 
