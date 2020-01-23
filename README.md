@@ -115,14 +115,17 @@ If a null is passed as the function pointer to ffidefine, ffidefine will convert
 ```
   import { debug, dlopen, dlerror, dlclose, dlsym,
            ffidefine, fficall, ffitostring, ffitoarraybuffer,
+           errno,
            RTLD_LAZY, RTLD_NOW, RTLD_GLOBAL, RTLD_LOCAL,
            RTLD_NODELETE, RTLD_NOLOAD, RTLD_DEEPBIND,
            RTLD_DEFAULT, RTLD_NEXT } from "./ffi.so";
 ```
 
-## dlopen, dlerror, dlclose, dlsym ##
+## dlopen, dlerror, dlclose, dlsym, errno ##
 
 These functions are described in the **man** pages. The **man** pages also describe the constant RTLD_* that are available.
+
+Note that errno() is a function.
 
 ## ffidefine, fficall, ffitostring, ffitoarraybuffer ##
 
@@ -203,6 +206,8 @@ Breakpoints can then be set in other shared objects.
 * ArrayBuffer can be passed (converted to pointer like string)
 * Add ffitoarraybuffer(p, size)
 * Add type "buffer"
+* Wed Jan 22 22:17:33 EST 2020
+* Add errno function
 
 ## Limitations ##
 

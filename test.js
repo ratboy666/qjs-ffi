@@ -24,6 +24,7 @@ import * as std from "std";
 import * as os from "os";
 import { debug, dlopen, dlerror, dlclose, dlsym,
          ffidefine, fficall, ffitostring, ffitoarraybuffer,
+         errno,
          RTLD_LAZY, RTLD_NOW, RTLD_GLOBAL, RTLD_LOCAL,
          RTLD_NODELETE, RTLD_NOLOAD, RTLD_DEEPBIND,
          RTLD_DEFAULT, RTLD_NEXT } from "./ffi.so";
@@ -148,3 +149,13 @@ u = new Uint8Array(b);
 console.log(u);
 
 fficall("free", p);
+
+fp = dlsym(RTLD_DEFAULT, "strtoul");
+if (fp == null)
+  console.log(dlerror());
+ffidefine("strtoul", fp, null, "ulong", "string", "string", "int");
+n = fficall("strtoul", "1234", null, 0);
+console.log(n);
+fficall("strtoul", '1234567890123456789012345678901234567890', null, 0);
+console.log(errno(), "should be 34 (ERANGE)");
+       
