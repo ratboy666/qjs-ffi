@@ -181,9 +181,11 @@ static void define_types(void) {
 
     /* Extra types with more semantics. For now, the semantics are
      * automatic in fficall, but we can use a name in ffidefine to
-     * show the intention.
+     * show the intention. string is for JavaScript strings. buffer
+     * is for JavaScript ArrayBuffers.
      */
     define_ffi_type("string", &ffi_type_pointer);
+    define_ffi_type("buffer", &ffi_type_pointer);
 }
 
 
@@ -509,7 +511,7 @@ static JSValue js_dlopen(JSContext *ctx, JSValueConst this_val,
 	if (!s)
 	    return JS_EXCEPTION;
     }
-    if (JS_ToInt32(ctx, &n, argv[1]))
+    if (JS_ToUint32(ctx, &n, argv[1]))
         return JS_EXCEPTION;
     res = dlopen(s, n);
     if (s)
@@ -645,7 +647,7 @@ static JSValue js_fficall(JSContext *ctx, JSValueConst this_val,
 	args[i].arg.ll = 0;
 	args[i].type = TYPE_INTEGRAL;
     }
-    for (i = 1; i < argc; ++i) {
+    for (i = 1; (i < argc) && (i <= MAX_PARAMETERS); ++i) {
 	if (JS_IsNull(argv[i])) {
 	    ;
 	} else if (JS_IsBool(argv[i])) {
@@ -670,8 +672,13 @@ static JSValue js_fficall(JSContext *ctx, JSValueConst this_val,
 		goto error;
 	    strings[fl++] = s;
 	    args[i - 1].arg.ll = (long long)s;
-	} else { /* uint8 array: see read for detail */
-	    goto error;
+	} else {
+	    uint8_t *buf;
+	    size_t size;
+	    buf = JS_GetArrayBuffer(ctx, &size, argv[i]);
+	    if (!buf)
+		goto error;
+	    args[i - 1].arg.ll = (long long)buf;
 	}
     }
     if (call_function(name,
@@ -702,6 +709,27 @@ static JSValue js_ffitostring(JSContext *ctx, JSValueConst this_val,
 }
 
 
+/* b = ffitoarraybuffer(p, size)
+ */
+static JSValue js_ffitoarraybuffer(JSContext *ctx,
+                                   JSValueConst this_val,
+                                   int argc, JSValueConst *argv) {
+    const uint8_t *buf;
+    int64_t p, s;
+    size_t size;
+    if (JS_ToInt64(ctx, &p, argv[0]))
+	return JS_EXCEPTION;
+    if (JS_ToInt64(ctx, &s, argv[1]))
+	return JS_EXCEPTION;
+    if (s < 0)
+	return JS_EXCEPTION;
+    size = s;
+	
+    buf = (const uint8_t *)p;
+    return JS_NewArrayBufferCopy(ctx, buf, size);
+}
+
+
 static const JSCFunctionListEntry js_funcs[] = {
     JS_CFUNC_DEF("debug", 0, js_debug),
     JS_CFUNC_DEF("dlopen", 2, js_dlopen),
@@ -711,6 +739,7 @@ static const JSCFunctionListEntry js_funcs[] = {
     JS_CFUNC_DEF("ffidefine", 4, js_ffidefine),
     JS_CFUNC_DEF("fficall", 1, js_fficall),
     JS_CFUNC_DEF("ffitostring", 1, js_ffitostring),
+    JS_CFUNC_DEF("ffitoarraybuffer", 2, js_ffitoarraybuffer),
     JS_PROP_INT32_DEF("RTLD_LAZY", RTLD_LAZY, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("RTLD_NOW", RTLD_NOW, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("RTLD_GLOBAL", RTLD_GLOBAL, JS_PROP_CONFIGURABLE),

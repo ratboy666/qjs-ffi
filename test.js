@@ -23,8 +23,10 @@
 import * as std from "std";
 import * as os from "os";
 import { debug, dlopen, dlerror, dlclose, dlsym,
-         ffidefine, fficall, ffitostring,
-         RTLD_NOW, RTLD_DEFAULT } from "./ffi.so";
+         ffidefine, fficall, ffitostring, ffitoarraybuffer,
+         RTLD_LAZY, RTLD_NOW, RTLD_GLOBAL, RTLD_LOCAL,
+         RTLD_NODELETE, RTLD_NOLOAD, RTLD_DEEPBIND,
+         RTLD_DEFAULT, RTLD_NEXT } from "./ffi.so";
 
 var h;
 var r;
@@ -99,12 +101,50 @@ ffidefine("strdup", strdup, null, "char *", "char *");
 
 p = fficall("strdup", "dup this");
 
-/* Convert strdup() result into a string (shoul display 
+/* Convert strdup() result into a string (should display 
  * dup this 8
  */
 var s;
 s = ffitostring(p);
 console.log(s, fficall("strlen", p));
 
-fficall("free", p);
 
+console.log();
+console.log('testing test.so functions');
+h = dlopen('./test.so', RTLD_NOW);
+if (h == null)
+  console.log("can't load ./test.so: ", dlerror());
+var fp;
+fp = dlsym(h, "test1");
+if (fp == null)
+  console.log("can't find symbol test1: ", dlerror());
+if (!ffidefine("test1", fp, null, "int", "void *"))
+  console.log("can't define test1");
+/* test1 takes a buffer but a string will work -- changes to the string
+ * are lost, because a writable buffer is passed, but discarded before
+ * the return.
+ */
+r = fficall("test1", "abc");
+console.log("should be 5: ", r);
+/* pass buffer to test1 -- test1 changes the buffer in place, and this
+ * is reflected in quickjs
+ */
+var b;
+b = new ArrayBuffer(8);
+var u;
+u = new Uint8Array(b);
+u[0] = 1;
+u[1] = 2;
+u[2] = 3;
+console.log("should print 1 2 3");
+r = fficall("test1", b);
+console.log("should print 3,2,1,0,0,0,0,0");
+console.log(u);
+
+/* p is a pointer to "dup this" -- 9 bytes of memory
+ */
+b = ffitoarraybuffer(p, 9);
+u = new Uint8Array(b);
+console.log(u);
+
+fficall("free", p);

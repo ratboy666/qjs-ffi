@@ -14,7 +14,7 @@ Use dlopen() and dlsym() to get a function pointer to a desired function, use ff
 
 ```
 	import { dlsym,
-	         ffidefine, fficall, ffitostring,
+	         ffidefine, fficall, ffitostring, ffitoarraybuffer,
 	         RTLD_DEFAULT } from "./ffi.so";
 
 	var fp;
@@ -30,6 +30,8 @@ name is the name you want to refer to the function as, function_pointer is obtai
 n = fficall(name, params...) calls the function with the parameters.
 
 s = ffitostring(p) converts a pointer p to a string.
+
+b = ffitoarraybuffer(p, n) converts pointer p, length n to ArrayBuffer.
 
 ## Installation ##
 Installing qjs-ffi easy.
@@ -94,7 +96,8 @@ These are the types from libffi:
 
 Semantic types:
 
-*   "string" ("pointer")
+*   "string" ("pointer", for JavaScript string)
+*   "buffer" ("pointer", for ArrayBuffer)
 
 Since fficall converts JavaScript strings into a pointer to the string data, "string" can be used as a parameter type to indicate that this is the intended behaviour (call with a C string constant).
 
@@ -111,7 +114,7 @@ If a null is passed as the function pointer to ffidefine, ffidefine will convert
 ## Available imports ##
 ```
   import { debug, dlopen, dlerror, dlclose, dlsym,
-           ffidefine, fficall, ffitostring,
+           ffidefine, fficall, ffitostring, ffitoarraybuffer,
            RTLD_LAZY, RTLD_NOW, RTLD_GLOBAL, RTLD_LOCAL,
            RTLD_NODELETE, RTLD_NOLOAD, RTLD_DEEPBIND,
            RTLD_DEFAULT, RTLD_NEXT } from "./ffi.so";
@@ -121,7 +124,7 @@ If a null is passed as the function pointer to ffidefine, ffidefine will convert
 
 These functions are described in the **man** pages. The **man** pages also describe the constant RTLD_* that are available.
 
-## ffidefine, fficall, ffitostring ##
+## ffidefine, fficall, ffitostring, ffitoarraybuffer ##
 
 ffidefine() defines a prototype for a FFI C function. Given a function pointer, it produces a callable function:
 
@@ -161,12 +164,14 @@ fficall() always returns a double. This presumes that **all integers and pointer
 
 If fficall() detects a problem before the actual invocation, it will return an exception. This happens if the function is not yet defined, or a parameter cannot be converted.
 
-true and false are converted to integer 1 and 0, null to pointer 0 (NULL), integers and float as defined by the types specified in the definition. Strings are copied, and a pointer to the copy is passed. These are the standard conversions. As well, libffi may do additional conversions as needed to execute the call.
+true and false are converted to integer 1 and 0, null to pointer 0 (NULL), integers and float as defined by the types specified in the definition. Strings are copied, and a pointer to the copy is passed. These are the standard conversions. As well, libffi may do additional conversions as needed to execute the call. ArrayBuffer will be converted to a pointer, and the C function can change that memory.
 
 Some FFI functions will return or produce a pointer to a C string. ffitostring() will convert that pointer into a JavaScript string:
 ```
   console.log(ffitostring(p));
 ```
+
+If we have a pointer to memory, and a length, ffitoarraybuffer will create an ArrayBuffer with a copy of the storage.
 
 ## debug ##
 
@@ -191,11 +196,20 @@ The breakpoint is triggered on the first call to debug() in the JavaScript.
 
 Breakpoints can then be set in other shared objects.
 
+## Changes ##
+
+* Wed Jan 22 10:34:55 EST 2020
+* Note endian in Limitations
+* ArrayBuffer can be passed (converted to pointer like string)
+* Add ffitoarraybuffer(p, size)
+* Add type "buffer"
+
 ## Limitations ##
 
 * Only **double** is returned
 * No structure pass by value
-* No C to JavaScript (without specific code for this, C function qsort() cannot be used with a JavaScript compar function, for example).
+* No C to JavaScript (without specific code for this, C function qsort() cannot be used with a JavaScript comparision function, for example).
+* Only little-endian (I don't have a big-endian test system)
 
 ## TODO ##
 
@@ -205,4 +219,4 @@ ffi.so is useful, but some features would be worthwhile to add. I haven't needed
 * C structure access via pointer -- define setters/getters by type
 * Define and pass structures by value (new "types")
 * Expand return to return true 64 bit integers and pointers
-
+* Allow other endian
