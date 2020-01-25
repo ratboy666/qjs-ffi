@@ -582,10 +582,10 @@ static JSValue js_dlsym(JSContext *ctx, JSValueConst this_val,
 
 #define MAX_PARAMETERS 30
 
-/* ffidefine(name, fp, abi, ret, p1,...pn)
+/* define(name, fp, abi, ret, p1,...pn)
  */
-static JSValue js_ffidefine(JSContext *ctx, JSValueConst this_val,
-                            int argc, JSValueConst *argv) {
+static JSValue js_define(JSContext *ctx, JSValueConst this_val,
+                         int argc, JSValueConst *argv) {
     const char *name = NULL;
     int64_t fp = 0;
     const char *abi = NULL;
@@ -641,10 +641,10 @@ static inline JS_BOOL JS_IsInteger(JSValueConst v) {
     return tag == JS_TAG_INT || tag == JS_TAG_BIG_INT;
 }
 
-/* r = fficall(name, p1,...pn)
+/* r = call(name, p1,...pn)
  */
-static JSValue js_fficall(JSContext *ctx, JSValueConst this_val,
-                          int argc, JSValueConst *argv) {
+static JSValue js_call(JSContext *ctx, JSValueConst this_val,
+                       int argc, JSValueConst *argv) {
     const char *name = NULL;
     JSValue r = JS_EXCEPTION;
     typed_argument args[MAX_PARAMETERS];
@@ -709,10 +709,10 @@ error:
 }
 
 
-/* s = ffitostring(p)
+/* s = toString(p)
  */
-static JSValue js_ffitostring(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv) {
+static JSValue js_tostring(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv) {
     const char *s;
     int64_t p;
     if (JS_ToInt64(ctx, &p, argv[0]))
@@ -722,11 +722,10 @@ static JSValue js_ffitostring(JSContext *ctx, JSValueConst this_val,
 }
 
 
-/* b = ffitoarraybuffer(p, size)
+/* b = toArrayBuffer(p, size)
  */
-static JSValue js_ffitoarraybuffer(JSContext *ctx,
-                                   JSValueConst this_val,
-                                   int argc, JSValueConst *argv) {
+static JSValue js_toarraybuffer(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv) {
     const uint8_t *buf;
     int64_t p, s;
     size_t size;
@@ -742,6 +741,13 @@ static JSValue js_ffitoarraybuffer(JSContext *ctx,
     return JS_NewArrayBufferCopy(ctx, buf, size);
 }
 
+/* p = JSContext()
+ */
+static JSValue js_context(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv) {
+    return JS_NewInt64(ctx, (long long)ctx);
+}
+
 
 static const JSCFunctionListEntry js_funcs[] = {
     JS_CFUNC_DEF("debug", 0, js_debug),
@@ -749,11 +755,12 @@ static const JSCFunctionListEntry js_funcs[] = {
     JS_CFUNC_DEF("dlerror", 0, js_dlerror),
     JS_CFUNC_DEF("dlclose", 1, js_dlclose),
     JS_CFUNC_DEF("dlsym", 2, js_dlsym),
-    JS_CFUNC_DEF("ffidefine", 4, js_ffidefine),
-    JS_CFUNC_DEF("fficall", 1, js_fficall),
-    JS_CFUNC_DEF("ffitostring", 1, js_ffitostring),
-    JS_CFUNC_DEF("ffitoarraybuffer", 2, js_ffitoarraybuffer),
+    JS_CFUNC_DEF("define", 4, js_define),
+    JS_CFUNC_DEF("call", 1, js_call),
+    JS_CFUNC_DEF("toString", 1, js_tostring),
+    JS_CFUNC_DEF("toArrayBuffer", 2, js_toarraybuffer),
     JS_CFUNC_DEF("errno", 0, js_errno),
+    JS_CFUNC_DEF("JSContext", 0, js_context),
 #ifdef RTLD_LAZY
     JS_PROP_INT32_DEF("RTLD_LAZY", RTLD_LAZY, JS_PROP_CONFIGURABLE),
 #endif

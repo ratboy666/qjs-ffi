@@ -23,8 +23,8 @@
 import * as std from "std";
 import * as os from "os";
 import { debug, dlopen, dlerror, dlclose, dlsym,
-         ffidefine, fficall, ffitostring, ffitoarraybuffer,
-         errno,
+         define, call, toString, toArrayBuffer,
+         errno, JSContext,
          RTLD_LAZY, RTLD_NOW, RTLD_GLOBAL, RTLD_LOCAL,
          RTLD_NODELETE, RTLD_NOLOAD, RTLD_DEEPBIND,
          RTLD_DEFAULT, RTLD_NEXT } from "./ffi.so";
@@ -32,6 +32,7 @@ import { debug, dlopen, dlerror, dlclose, dlsym,
 var h;
 var r;
 console.log("Hello World");
+debug();
 console.log("RTLD_NOW = ", RTLD_NOW);
 /* Expect an error -- libc.so is (usually) a linker script */
 console.log("dlopen = ", r = dlopen("libc.so", RTLD_NOW));
@@ -68,15 +69,15 @@ if (free == null)
 /* We have function pointers to malloc and free -- define the ffi
  * functions
  */
-ffidefine("malloc", malloc, null, "void *", "size_t");
-ffidefine("free", free, null, "void", "void *");
+define("malloc", malloc, null, "void *", "size_t");
+define("free", free, null, "void", "void *");
 
 /* p = malloc(10); display pointer, free(p)
  */
 var p;
-p = fficall("malloc", 10);
+p = call("malloc", 10);
 console.log(p);
-fficall("free", p);
+call("free", p);
 
 /* n = strlen("hello"); which should result in 5
  */
@@ -84,11 +85,10 @@ var strlen;
 strlen = dlsym(RTLD_DEFAULT, "strlen");
 if (strlen == null)
   console.log(dlerror());
-ffidefine("strlen", strlen, null, "int", "char *");
+define("strlen", strlen, null, "int", "char *");
 
 var n;
-debug();
-n = fficall("strlen", "hello");
+n = call("strlen", "hello");
 /* We expect 5 */
 console.log(n);
 
@@ -98,16 +98,16 @@ var strdup;
 strdup = dlsym(RTLD_DEFAULT, "strdup");
 if (strdup == null)
   console.log(dlerror());
-ffidefine("strdup", strdup, null, "char *", "char *");
+define("strdup", strdup, null, "char *", "char *");
 
-p = fficall("strdup", "dup this");
+p = call("strdup", "dup this");
 
 /* Convert strdup() result into a string (should display 
  * dup this 8
  */
 var s;
-s = ffitostring(p);
-console.log(s, fficall("strlen", p));
+s = toString(p);
+console.log(s, call("strlen", p));
 
 
 console.log();
@@ -119,13 +119,13 @@ var fp;
 fp = dlsym(h, "test1");
 if (fp == null)
   console.log("can't find symbol test1: ", dlerror());
-if (!ffidefine("test1", fp, null, "int", "void *"))
+if (!define("test1", fp, null, "int", "void *"))
   console.log("can't define test1");
 /* test1 takes a buffer but a string will work -- changes to the string
  * are lost, because a writable buffer is passed, but discarded before
  * the return.
  */
-r = fficall("test1", "abc");
+r = call("test1", "abc");
 console.log("should be 5: ", r);
 /* pass buffer to test1 -- test1 changes the buffer in place, and this
  * is reflected in quickjs
@@ -138,24 +138,27 @@ u[0] = 1;
 u[1] = 2;
 u[2] = 3;
 console.log("should print 1 2 3");
-r = fficall("test1", b);
+r = call("test1", b);
 console.log("should print 3,2,1,0,0,0,0,0");
 console.log(u);
 
 /* p is a pointer to "dup this" -- 9 bytes of memory
  */
-b = ffitoarraybuffer(p, 9);
+b = toArrayBuffer(p, 9);
 u = new Uint8Array(b);
 console.log(u);
 
-fficall("free", p);
+call("free", p);
 
 fp = dlsym(RTLD_DEFAULT, "strtoul");
 if (fp == null)
   console.log(dlerror());
-ffidefine("strtoul", fp, null, "ulong", "string", "string", "int");
-n = fficall("strtoul", "1234", null, 0);
-console.log(n);
-fficall("strtoul", '1234567890123456789012345678901234567890', null, 0);
+define("strtoul", fp, null, "ulong", "string", "string", "int");
+n = call("strtoul", "1234", null, 0);
+console.log(n, "Should be 1234");
+call("strtoul", '1234567890123456789012345678901234567890', null, 0);
 console.log(errno(), "should be 34 (ERANGE)");
-       
+
+p = JSContext();
+console.log("jscontext = ", p);
+
