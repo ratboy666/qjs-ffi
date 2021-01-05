@@ -741,6 +741,10 @@ static JSValue js_toarraybuffer(JSContext *ctx, JSValueConst this_val,
     return JS_NewArrayBufferCopy(ctx, buf, size);
 }
 
+/* s = toPointer(ArrayBuffer)
+ *
+ * returns string 0xhhhhhhhh which is the base of the ArrayBuffer
+ */
 static JSValue js_topointer(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv) {
     uint8_t *ptr;
