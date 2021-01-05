@@ -741,6 +741,17 @@ static JSValue js_toarraybuffer(JSContext *ctx, JSValueConst this_val,
     return JS_NewArrayBufferCopy(ctx, buf, size);
 }
 
+static JSValue js_topointer(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv) {
+    uint8_t *ptr;
+    uint64_t p;
+    size_t size;
+    char buf[sizeof(ptr) * 2 + 2 + 1];
+    ptr = JS_GetArrayBuffer(ctx, &size, argv[0]);
+    snprintf(buf, sizeof(buf), "%p", ptr);
+    return JS_NewString(ctx, buf);
+}
+
 /* p = JSContext()
  */
 static JSValue js_context(JSContext *ctx, JSValueConst this_val,
@@ -759,6 +770,7 @@ static const JSCFunctionListEntry js_funcs[] = {
     JS_CFUNC_DEF("call", 1, js_call),
     JS_CFUNC_DEF("toString", 1, js_tostring),
     JS_CFUNC_DEF("toArrayBuffer", 2, js_toarraybuffer),
+    JS_CFUNC_DEF("toPointer", 1, js_topointer),
     JS_CFUNC_DEF("errno", 0, js_errno),
     JS_CFUNC_DEF("JSContext", 0, js_context),
 #ifdef RTLD_LAZY
