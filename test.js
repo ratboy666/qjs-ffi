@@ -24,7 +24,7 @@ import * as std from "std";
 import * as os from "os";
 import { debug, dlopen, dlerror, dlclose, dlsym,
          define, call, toString, toArrayBuffer,
-         errno, JSContext,
+         toPointer, ptrSize, argSize, littleEndian, errno, JSContext,
          RTLD_LAZY, RTLD_NOW, RTLD_GLOBAL, RTLD_LOCAL,
          RTLD_NODELETE, RTLD_NOLOAD, RTLD_DEEPBIND,
          RTLD_DEFAULT, RTLD_NEXT } from "./ffi.so";
@@ -162,3 +162,87 @@ console.log(errno(), "should be 34 (ERANGE)");
 p = JSContext();
 console.log("jscontext = ", p);
 
+console.log('ptrSize =', ptrSize);
+console.log('argSize =', argSize);
+console.log('littleEndian =', littleEndian);
+
+ArrayBuffer.prototype.addressOf = function() {
+    return toPointer(this);
+};
+
+let buf = new ArrayBuffer(256);
+let addr = toPointer(buf);
+let len, str;
+
+const cstr = ['strlen', 'strncpy', 'strncat', 'strchr', 'strtok_r', 'strcmp', 'qsort'].reduce((o, s) => {
+    if(null == (fp = dlsym(RTLD_DEFAULT, s))) console.log(dlerror());
+    return { ...o, [s]: fp };
+}, {});
+
+define('strlen', cstr.strlen, null, 'size_t', 'string');
+define('strncpy', cstr.strncpy, null, 'string', 'buffer', 'string', 'size_t');
+define('strncat', cstr.strncat, null, 'string', 'buffer', 'string', 'size_t');
+define('strchr', cstr.strchr, null, 'string', 'string', 'string');
+define('strtok_r', cstr.strtok_r, null, 'string', 'buffer', 'string', 'void *');
+
+call('strncpy', buf, 'Buffer address: ', 11);
+len = call('strlen', buf);
+console.log('len =', len);
+
+call('strncat', buf, ': ', buf.byteLength - len);
+len = call('strlen', buf);
+console.log('len =', len);
+
+call('strncat', buf, addr, buf.byteLength - len);
+len = call('strlen', buf);
+console.log('len =', len);
+
+console.log('buf:\n  Hex dump =' +
+        new Uint8Array(buf).reduce((acc, charCode) => (!acc.endsWith('00') ? acc + ' ' + ('0' + charCode.toString(16)).slice(-2) : acc), '')
+);
+
+console.log('  toString = "' + toString(buf.addressOf()));
+
+str = call('strncpy', buf, 'pears, cherries, limes, bananas, lemons, melons, oranges, apples', buf.byteLength);
+console.log('str =', toString(str));
+
+let token, saveptr = new ArrayBuffer(ptrSize);
+let strings = new BigUint64Array(8);
+console.log('saveptr.addressOf() =', saveptr.addressOf());
+let array = [];
+let size = 32;
+
+for(let i = 0; (token = call('strtok_r', i ? null : str, ', ', saveptr)); i++) {
+    const p = new BigUint64Array(saveptr)[0];
+    const t = toString(token);
+    const s = `"${t}"`;
+    console.log(`token #${i}: ${s.padEnd(12)}, pointer = 0x${p.toString(16)}, pos = ${p - BigInt(addr)}`);
+
+    let a = new Array(size);
+    for(let j = 0; j < t.length; j++) a[j] = t[j];
+    for(let j = t.length; j < a.length; j++) a[j] = ' ';
+    a[t.length] = '\x00';
+    array = array.concat(a);
+}
+
+let u8array = Uint8Array.from(array, ch => ch.charCodeAt(0));
+
+console.log('u8array.length =', u8array.length);
+console.log('u8array:\n  Hex dump =' +
+        u8array.reduce((acc, charCode, i) => !acc.endsWith('00') ? acc + (i % size == 0 ? '\n' : ' ') + ('0' + charCode.toString(16)).slice(-2) : acc, '')
+);
+
+define('strcmp', cstr.strcmp, null, 'int', 'string', 'string');
+define('qsort', cstr.qsort, null, 'void', 'buffer', 'size_t', 'size_t', 'void *');
+
+n = u8array.length;
+buf = u8array.buffer;
+call('qsort', u8array.buffer, n / size, size, cstr.strcmp);
+
+let y, x = [];
+for(let i = 0; i < n; i += size) x.push(BigInt(i) + BigInt(buf.addressOf()));
+
+y = x.map(p => '0x' + p.toString(16));
+
+console.log('pointers:', y.map(p => '\n  ' + p));
+console.log('strings:', y.map(p => toString(p)));

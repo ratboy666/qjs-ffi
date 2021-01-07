@@ -741,17 +741,27 @@ static JSValue js_toarraybuffer(JSContext *ctx, JSValueConst this_val,
     return JS_NewArrayBufferCopy(ctx, buf, size);
 }
 
-/* s = toPointer(ArrayBuffer)
+/* s = toPointer(ArrayBuffer[, offset])
  *
- * returns string 0xhhhhhhhh which is the base of the ArrayBuffer
+ * returns string 0xhhhhhhhh which is the base of the ArrayBuffer plus an optional offset.
+ * A negative offset can be used, indicating an offset from the end of the buffer.
  */
 static JSValue js_topointer(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv) {
     uint8_t *ptr;
-    uint64_t p;
     size_t size;
-    char buf[sizeof(ptr) * 2 + 2 + 1];
+    char buf[64];
     ptr = JS_GetArrayBuffer(ctx, &size, argv[0]);
+    if(argc > 1) {
+        int64_t off;
+        if(JS_ToInt64(ctx, &off, argv[1]))
+            return JS_EXCEPTION;
+        if(off < 0)
+            off += size;
+        if(off > size || off < 0)
+            return JS_EXCEPTION;
+        ptr += off;
+    }
     snprintf(buf, sizeof(buf), "%p", ptr);
     return JS_NewString(ctx, buf);
 }
@@ -807,6 +817,11 @@ static const JSCFunctionListEntry js_funcs[] = {
 #ifdef RTLD_NEXT
     JS_PROP_INT64_DEF("RTLD_NEXT", (long)RTLD_NEXT,
 	JS_PROP_CONFIGURABLE),
+#endif
+    JS_PROP_INT32_DEF("argSize", FFI_SIZEOF_ARG, JS_PROP_CONFIGURABLE),
+    JS_PROP_INT32_DEF("ptrSize", sizeof(void*), JS_PROP_CONFIGURABLE),
+#ifdef __BYTE_ORDER__
+    JS_PROP_INT32_DEF("littleEndian", __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, JS_PROP_CONFIGURABLE),
 #endif
 };
 
