@@ -743,8 +743,9 @@ static JSValue js_toarraybuffer(JSContext *ctx, JSValueConst this_val,
 
 /* s = toPointer(ArrayBuffer[, offset])
  *
- * returns string 0xhhhhhhhh which is the base of the ArrayBuffer plus an optional offset.
- * A negative offset can be used, indicating an offset from the end of the buffer.
+ * returns string 0xAABBCCDD which is the base of the ArrayBuffer
+ * plus an optional offset. A negative offset can be used,
+ * indicating an offset from the end of the buffer.
  */
 static JSValue js_topointer(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv) {
@@ -818,11 +819,7 @@ static const JSCFunctionListEntry js_funcs[] = {
     JS_PROP_INT64_DEF("RTLD_NEXT", (long)RTLD_NEXT,
 	JS_PROP_CONFIGURABLE),
 #endif
-    JS_PROP_INT32_DEF("argSize", FFI_SIZEOF_ARG, JS_PROP_CONFIGURABLE),
-    JS_PROP_INT32_DEF("ptrSize", sizeof(void*), JS_PROP_CONFIGURABLE),
-#ifdef __BYTE_ORDER__
-    JS_PROP_INT32_DEF("littleEndian", __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, JS_PROP_CONFIGURABLE),
-#endif
+    JS_PROP_INT32_DEF("pointerSize", sizeof(void*), JS_PROP_CONFIGURABLE)
 };
 
 
