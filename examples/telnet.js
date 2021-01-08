@@ -24,11 +24,7 @@ function main(...args) {
         log = open(arg, 'a+');
     }
 
-    debug('%s started (%s) [%s]',
-        scriptArgs[0].replace(/.*\//g, ''),
-        args,
-        new Date().toISOString()
-    );
+    debug('%s started (%s) [%s]', scriptArgs[0].replace(/.*\//g, ''), args, new Date().toISOString());
 
     const SetupTerm = Once(() => { //ttySetRaw(STDIN_FILENO);
         ReturnValue(tcgetattr(STDIN_FILENO, tattr), 'tcgetattr');
@@ -75,9 +71,7 @@ function main(...args) {
     const SendTerm = Once(() => Send('\xff\xfa\x18\x00XTERM-256COLOR\xff\xf0'));
     const Send = (a, n) => { const b = a instanceof ArrayBuffer ? a : StringToBuffer(a);
         if(n === undefined) n = b.byteLength;
-        debug('Send -> %s',
-            a instanceof ArrayBuffer ? Dump(b, n) : EscapeString(a)
-        );
+        debug('Send -> %s', a instanceof ArrayBuffer ? Dump(b, n) : EscapeString(a));
         return sock.write(b, 0, n);
     };
     debug('errnos: %s', Object.entries(errnos));
@@ -106,10 +100,7 @@ function main(...args) {
                         ttySetRaw(STDOUT_FILENO);
                         signal(2, function() {
                             debug('SIGINT');
-                            [outBuf, outLen] = Append(outBuf,
-                                outLen,
-                                tattr.c_cc[VINTR]
-                            );
+                            [outBuf, outLen] = Append(outBuf, outLen, tattr.c_cc[VINTR]);
                         });
                         signal(21, function() {
                             debug('SIGTTIN');
@@ -186,22 +177,14 @@ function main(...args) {
                     //err.printf("char '%c'\n", chars[i]);
                     switch (chars[i]) {
                         case 0x11: {
-                            out.printf([
-                                    /*'\x1bc\x1b[?1000l',*/ '\x1b[?25h',
-                                    '\r\n',
-                                    'Exited\n'
-                                ].join('')
-                            );
+                            out.printf([/*'\x1bc\x1b[?1000l',*/ '\x1b[?25h', '\r\n', 'Exited\n'].join(''));
                             exit(1);
                             break;
                         }
                         case 0xff: {
                             if(chars[i + 1] == 0xf2 && chars[i + 2] == 0x03) {
                                 i += 2;
-                                [outBuf, outLen] = Append(outBuf,
-                                    outLen,
-                                    chars[i]
-                                );
+                                [outBuf, outLen] = Append(outBuf, outLen, chars[i]);
                                 break;
                             }
                         }
@@ -219,13 +202,7 @@ function main(...args) {
 
 function ReturnValue(ret, ...args) {
     const r = [-1, 0].indexOf(ret) != -1 ? ret + '' : '0x' + NumberToHex(ret, ptrSize * 2);
-    debug('%s ret = %s%s%s',
-        args,
-        r,
-        ...(ret == -1
-            ? [' errno =', errno(), ' error =', strerror(errno())]
-            : ['', ''])
-    );
+    debug('%s ret = %s%s%s', args, r, ...(ret == -1 ? [' errno =', errno(), ' error =', strerror(errno())] : ['', '']));
 }
 
 function NumberToHex(n, b = 2) {
@@ -243,37 +220,32 @@ function EscapeString(str) {
         else if(code == 0x0d) r += '\\r';
         else if(code == 0x09) r += '\\t';
         else if(code <= 3) r += '\\0';
-        else if(code < 32 || code >= 128)
-            r += `\\${('00' + code.toString(8)).slice(-3)}`;
+        else if(code < 32 || code >= 128) r += `\\${('00' + code.toString(8)).slice(-3)}`;
         else r += str[i];
     }
     return r;
 }
 
 function BufferToArray(buf, offset, length) {
-    let len, arr = new Uint8Array( buf, offset !== undefined ? offset : 0, length !== undefined ? length : buf.byteLength );
+    let len, arr = new Uint8Array(buf, offset !== undefined ? offset : 0, length !== undefined ? length : buf.byteLength);
     //   arr = [...arr];
     if((len = arr.indexOf(0)) != -1) arr = arr.slice(0, len);
     return arr;
 }
 
 function BufferToString(buf, offset, length) {
-    return BufferToArray(buf, offset, length).reduce((s, code) => s + String.fromCharCode(code),
-        ''
-    );
+    return BufferToArray(buf, offset, length).reduce((s, code) => s + String.fromCharCode(code), '');
 }
 
-function ArrayBufToHex(buf, offset = 0, len) {
+function BufferToBytes(buf, offset = 0, len) {
     len = len === undefined ? buf.byteLength : len;
-    return ArrayToHex(new Uint8Array(buf, offset, len));
+    return ArrayToBytes(new Uint8Array(buf, offset, len));
 }
 
-function ArrayToHex(arr, delim = ', ', bytes = 1) {
+function ArrayToBytes(arr, delim = ', ', bytes = 1) {
     return ('[' +
         arr.reduce((s, code) =>
-                (s != '' ? s + delim : '') +
-                '0x' +
-                ('000000000000000' + code.toString(16)).slice(-(bytes * 2)),
+                (s != '' ? s + delim : '') + '0x' + ('000000000000000' + code.toString(16)).slice(-(bytes * 2)),
             ''
         ) +
         ']'
@@ -285,7 +257,7 @@ function AvailableBytes(buf, numBytes) {
 }
 
 function Append(buf, numBytes, ...chars) {
-    let n = chars.reduce((a, c) => (typeof c == 'number' ? a + 1 : a + c.length), 0 );
+    let n = chars.reduce((a, c) => (typeof c == 'number' ? a + 1 : a + c.length), 0);
     if(AvailableBytes(buf, numBytes) < n) buf = CloneBuf(buf, numBytes + n);
     let a = new Uint8Array(buf, numBytes, n);
     let p = 0;
@@ -302,7 +274,7 @@ function Append(buf, numBytes, ...chars) {
 }
 
 function Dump(buf, numBytes) {
-    return ArrayBufToHex(numBytes !== undefined ? buf.slice(0, numBytes) : buf);
+    return BufferToBytes(numBytes !== undefined ? buf.slice(0, numBytes) : buf);
 }
 
 function CloneBuf(buf, newLen) {

@@ -552,9 +552,7 @@ return `{ .c_iflag=${this.c_iflag}, .c_oflag=${this.c_oflag}, .c_cflag=${this.c_
                 const e = Object.entries(o).find(([name, b]) => mask(b) == h);
                 if(e) r.push(e[0]);
             } else {
-                if(countBits(bit) > 1)
-                    throw new Error(`flags name=${name} bit=0x${bit.toString(16)}`
-                    );
+                if(countBits(bit) > 1) throw new Error(`flags name=${name} bit=0x${bit.toString(16)}`);
                 if(flags & bit) r.push(name);
             }
         }
