@@ -162,9 +162,7 @@ q = toPointer(b, 4);
 console.log(q, "should be " + (BigInt(p) + 4n).toString(16));
 
 call("strcpy", +q, "this pointer");
-call("strcpy", q - 1, "");
 console.log(toString(q), call("strlen", +q));
-console.log(toString(p), call("strlen", +p));
 
 
 fp = dlsym(RTLD_DEFAULT, "strtoul");
